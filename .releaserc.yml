@@ -1,0 +1,11 @@
+# Este archivo define la configuración para semantic-release.
+# Solo incluimos plugins de análisis y Git para evitar el error ENOPKG.
+plugins:
+  # Analiza commits para determinar el tipo de versión (major, minor, patch)
+  - "@semantic-release/commit-analyzer"
+  # Genera las notas de lanzamiento
+  - "@semantic-release/release-notes-generator"
+  # Gestiona el archivo CHANGELOG.md
+  - "@semantic-release/changelog"
+  # Gestiona la creación de tags de Git y la subida de archivos (incluyendo CHANGELOG.md)
+  - "@semantic-release/git"
