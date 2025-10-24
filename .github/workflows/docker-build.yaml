@@ -1,42 +1,74 @@
-name: Docker Build & Push Go Collector
+name: Docker Build & Semantic Release
 
+# El flujo solo se ejecuta cuando hay un push a la rama 'main'
 on:
-  # Se ejecuta cuando haces push a la rama principal
   push:
     branches: [ main ]
-    tags:
-      - 'v*' # También se ejecuta al crear tags (ej: v1.0.0)
 
 env:
   REGISTRY: ghcr.io
-  # Usamos el nombre del repositorio para la imagen
-  IMAGE_NAME: ${{ github.repository }}
+  # Nombre de la imagen en el registro de GitHub (GHCR)
+  IMAGE_NAME: log-collector-service
 
 jobs:
+  # Job 1: Determina la versión y crea el tag de Git
+  versioning:
+    runs-on: ubuntu-latest
+    # Permisos necesarios para que la acción pueda crear tags y escribir paquetes
+    permissions:
+      contents: write # Necesario para crear y subir tags
+      packages: write
+    outputs:
+      new_release_tag: ${{ steps.semantic.outputs.new_release_tag }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
+          fetch-depth: 0 
+      
+      - name: Automatic Semantic Versioning (Crea y sube el tag)
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          # Utiliza el preset convencional (fix, feat, BREAKING CHANGE)
+          extra_plugins: |
+            @semantic-release/changelog
+            @semantic-release/git
+        env:
+          # El token es necesario para autenticarse y crear el tag de Git
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  # Job 2: Construye y sube la imagen Docker
   build-and-push:
     runs-on: ubuntu-latest
+    # SOLO se ejecuta si el job 'versioning' creó una nueva etiqueta
+    if: needs.versioning.outputs.new_release_tag != ''
+    needs: versioning # Depende del job de versioning
     permissions:
       contents: read
       packages: write # Permiso para escribir en GitHub Container Registry
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (con el nuevo tag)
         uses: actions/checkout@v4
-
+        # Esto asegura que el workflow trabaja con el código que acaba de ser etiquetado
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
-      # Genera tags y etiquetas basados en el ref de Git (main o tag)
+      # Genera tags Docker usando el tag de Git recién creado
       - name: Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha,format=long
+            # Usa el tag de Git (ej: v1.1.0)
+            type=ref,event=tag 
+            # Añade una etiqueta basada en el SHA como fallback
+            type=sha,format=long 
 
       # Inicia sesión en GitHub Container Registry (GHCR)
       - name: Log in to GitHub Container Registry
@@ -46,7 +78,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }} 
 
-      # Compila la imagen y la sube al registro
+      # Compila la imagen y la sube al registro (Build and Push)
       - name: Build and push Docker image
         id: build_push
         uses: docker/build-push-action@v5
