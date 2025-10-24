@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentbit-config
+  namespace: kube-system # o el namespace donde ejecutes Fluent Bit
+data:
+  # fluent-bit.conf es el archivo de configuración principal
+  fluent-bit.conf: |
+    [SERVICE]
+        # Define los parámetros generales del servicio
+        Flush         5
+        Daemon        off
+        Log_Level     info
+        Parsers_File  parsers.conf
+        HTTP_Server   On
+        HTTP_Listen   0.0.0.0
+        HTTP_Port     2020
+
+    @INCLUDE input-kubernetes.conf
+    @INCLUDE filter-kubernetes.conf
+    @INCLUDE output-go-collector.conf
+
+  # input-kubernetes.conf: Dónde leer los logs
+  input-kubernetes.conf: |
+    [INPUT]
+        Name              tail
+        Tag               kube.*
+        Path              /var/log/containers/*.log # Lee los logs de Kubernetes
+        Parser            docker
+        DB                /var/log/flb_kube.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  5
+
+  # filter-kubernetes.conf: Enriquecimiento de los logs
+  filter-kubernetes.conf: |
+    [FILTER]
+        Name                kubernetes
+        Match               kube.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        Kube_Tag_Prefix     kube.var.log.containers.
+        Merge_Log           On
+        Merge_Log_Key       log_processed # Renombra el campo 'log' a 'log_processed'
+        Labels              Off
+        Annotations         Off
+        Use_POD_Slots       On
+        Buffer_Size         False
+
+  # output-go-collector.conf: Envía los logs al servicio Go
+  output-go-collector.conf: |
+    [OUTPUT]
+        Name              http
+        Match             kube.*
+        # URL de tu servicio Go: http://<service-name>.<namespace>.svc.cluster.local:<port>/<path>
+        Host              go-log-collector-service.[NAMESPACE_GO_COLLECTOR].svc.cluster.local
+        Port              8080
+        URI               /api/v1/ingest
+        Format            json
+        # BATCHING: Envía los logs en lotes de 500 registros
+        allow_unsafe      On
+        header_tag        On
+        Max_Retries       3
+        # Buffering interno de Fluent Bit: importante para evitar pérdidas
+        net.connect_timeout 5
+        storage.type      filesystem
+        # Chunk Size: ajusta el tamaño del payload HTTP. 1MB por lote.
+        Buffer_Chunk_Size 1m

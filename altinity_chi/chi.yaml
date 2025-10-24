@@ -1,0 +1,48 @@
+# clickhouse-cluster.yaml
+apiVersion: clickhouse.altinity.com/v1
+kind: ClickHouseInstallation
+metadata:
+  name: clickhouse-cluster
+  namespace: clickhouse
+spec:
+  configuration:
+    zookeeper:
+      nodes:
+        - host: clickhouse-keeper-keeper-cluster-0.clickhouse-keeper
+          port: 9181
+        - host: clickhouse-keeper-keeper-cluster-1.clickhouse-keeper
+          port: 9181
+        - host: clickhouse-keeper-keeper-cluster-2.clickhouse-keeper
+          port: 9181
+    clusters:
+      - name: cluster1
+        layout:
+          shardsCount: 1
+          replicasCount: 2
+  templates:
+    podTemplates:
+      - name: clickhouse
+        spec:
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchExpressions:
+                      - key: app
+                        operator: In
+                        values: ["clickhouse"]
+                  topologyKey: "kubernetes.io/hostname"
+          containers:
+            - name: clickhouse
+              image: clickhouse/clickhouse-server:24.8
+              ports:
+                - containerPort: 8123
+                - containerPort: 9000
+    volumeClaimTemplates:
+      - name: clickhouse-storage
+        spec:
+          accessModes: ["ReadWriteOnce"]
+          storageClassName: "standard"
+          resources:
+            requests:
+              storage: 10Gi
