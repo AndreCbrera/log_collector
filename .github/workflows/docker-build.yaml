@@ -14,12 +14,11 @@ jobs:
   # Job 1: Determina la versión y crea el tag de Git
   versioning:
     runs-on: ubuntu-latest
-    # Permisos ACTUALIZADOS: 
-    # Añadimos 'issues: write' para que Semantic Release pueda crear issues en caso de fallo (soluciona el 403).
+    # Permisos REVISADOS: Solo necesitamos 'contents: write' para crear el tag.
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-      issues: write # <-- Nuevo permiso añadido
+      # issues: write # <-- Eliminado, ya no es necesario sin el plugin @semantic-release/github
     outputs:
       new_release_tag: ${{ steps.semantic.outputs.new_release_tag }}
       
@@ -34,13 +33,13 @@ jobs:
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
         with:
-          # Usamos 'plugins' en lugar de 'extra_plugins' para anular los valores predeterminados 
-          # e intencionadamente OMITIR el plugin '@semantic-release/npm' (soluciona ENOPKG).
+          # PLUGINS REVISADOS Y MINIMALISTAS:
+          # Solo incluimos los plugins para analizar, generar notas, y crear el tag de Git.
+          # Se omite @semantic-release/github (soluciona 422) y @semantic-release/npm (soluciona ENOPKG).
           plugins: |
             @semantic-release/commit-analyzer
             @semantic-release/release-notes-generator
             @semantic-release/changelog
-            @semantic-release/github
             @semantic-release/git
         env:
           # El token es necesario para autenticarse y crear el tag de Git
