@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/AndreCbrera/log_collector/compare/v1.2.0...v1.3.0) (2025-10-25)
+
+
+### Features
+
+* **ci:** updating ci/cd pipeline ([18412a6](https://github.com/AndreCbrera/log_collector/commit/18412a6ce75ab4bec0e2fc689185d0265fd76e7c))
+
 # [1.2.0](https://github.com/AndreCbrera/log_collector/compare/v1.1.4...v1.2.0) (2025-10-25)
 
 
