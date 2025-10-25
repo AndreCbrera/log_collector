@@ -16,19 +16,19 @@ jobs:
   # Job 1: Determina la versión y crea el tag de Git
   versioning:
     # CONDICIÓN CLAVE: Solo se ejecuta si el evento es un push a la rama 'main'.
-    # Esto evita que se ejecute en el evento de tag (la segunda ejecución).
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-    outputs:
-      new_release_tag: ${{ steps.semantic.outputs.new_release_tag }}
-      
+    # Eliminamos 'outputs' ya que la lógica de ejecución se separó.
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # 🚨 UTILIZA el PAT para hacer checkout y disparar la siguiente ejecución.
+          token: ${{ secrets.RELEASE_PAT }}
           fetch-depth: 0 
       
       # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
@@ -46,7 +46,8 @@ jobs:
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 🚨 Semantic Release también debe usar el PAT para el push final.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
@@ -55,7 +56,6 @@ jobs:
     # CONDICIÓN CLAVE: El job solo se ejecuta si el evento es un PUSH de un tag que empieza por 'v'.
     if: startsWith(github.ref, 'refs/tags/v')
     
-    # SE ELIMINÓ: La dependencia 'needs: versioning' es innecesaria y causaba el problema de skip.
     permissions:
       contents: read
       packages: write # Permiso para escribir en GitHub Container Registry
