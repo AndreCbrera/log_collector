@@ -1,11 +1,11 @@
 name: Docker Build & Semantic Release
 
-# El flujo se ejecuta por un PUSH a la rama 'main' (para versioning) O un PUSH de un tag 'v*' (para build)
+# El flujo solo se ejecuta cuando hay un push a la rama 'main'
 on:
   push:
     branches: [ main ]
     tags:
-      - 'v*'
+      - 'v*' # Incluimos el trigger de tags para la segunda ejecución
 
 env:
   REGISTRY: ghcr.io
@@ -15,53 +15,51 @@ env:
 jobs:
   # Job 1: Determina la versión y crea el tag de Git
   versioning:
-    # CONDICIÓN CLAVE: Solo se ejecuta si el evento es un push a la rama 'main'.
+    # Agregamos esta condición para asegurar que NO corre en la segunda ejecución (la del tag)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Permisos REVISADOS: Solo necesitamos 'contents: write' para crear el tag.
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-    # Eliminamos 'outputs' ya que la lógica de ejecución se separó.
-    
+    outputs:
+      new_release_tag: ${{ steps.semantic.outputs.new_release_tag }}
+      
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions:checkout@v4
         with:
-          # 🚨 CLAVE: Usamos el PAT aquí para garantizar que la nueva ejecución se dispare.
-          token: ${{ secrets.RELEASE_PAT }}
+          # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
           fetch-depth: 0 
       
-      # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
-      - name: Create Semantic Release Config (.releaserc.yml)
-        run: |
-          cat << EOF > .releaserc.yml
-          plugins:
-            - "@semantic-release/commit-analyzer"
-            - "@semantic-release/release-notes-generator"
-            - "@semantic-release/changelog"
-            - "@semantic-release/git"
-          EOF
-
       - name: Automatic Semantic Versioning (Crea y sube el tag)
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
+        with:
+          # PLUGINS REVISADOS Y MINIMALISTAS:
+          # Solo incluimos los plugins para analizar, generar notas, y crear el tag de Git.
+          plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            @semantic-release/changelog
+            @semantic-release/git
         env:
-          # 🚨 CLAVE: Semantic Release debe usar el PAT.
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          # El token es necesario para autenticarse y crear el tag de Git
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
     runs-on: ubuntu-latest
-    
-    # CONDICIÓN CLAVE: El job solo se ejecuta si el evento es un PUSH de un tag que empieza por 'v'.
-    if: startsWith(github.ref, 'refs/tags/v')
-    
+    # CLAVE: La condición doble permite que el Job corra si:
+    # 1. 'versioning' creó un tag (Ejecución #1)
+    # 2. El workflow fue disparado por un tag (Ejecución #2)
+    if: needs.versioning.outputs.new_release_tag != '' || startsWith(github.ref, 'refs/tags/v')
+    needs: versioning # Depende del job de versioning
     permissions:
       contents: read
       packages: write # Permiso para escribir en GitHub Container Registry
 
     steps:
-      # En el evento de tag, el checkout obtendrá automáticamente el código del tag.
       - name: Checkout repository (con el tag)
         uses: actions/checkout@v4
         
