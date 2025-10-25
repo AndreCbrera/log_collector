@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os" // <- IMPORTACIÓN AÑADIDA
+	"os"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -88,25 +88,26 @@ func IngestHandler(w http.ResponseWriter, r *http.Request) {
 // --------------------------------------------------------------------------------
 
 func connectClickHouse() (clickhouse.Conn, error) {
-	// 🐛 CORREGIDO: Usar variables de entorno inyectadas por Kubernetes
 	host := os.Getenv("CLICKHOUSE_HOST")
 	port := os.Getenv("CLICKHOUSE_PORT")
+	password := os.Getenv("CLICKHOUSE_PASSWORD") // Ahora obtenemos la contraseña
 
 	if host == "" || port == "" {
-		// Fallback para desarrollo o error en la inyección de env
 		return nil, fmt.Errorf("variables de entorno CLICKHOUSE_HOST o CLICKHOUSE_PORT no definidas")
 	}
 
 	addr := fmt.Sprintf("%s:%s", host, port)
 
-	fmt.Printf("ℹ️ Intentando conectar a ClickHouse en: %s\n", addr) // Log de depuración
+	fmt.Printf("ℹ️ Intentando conectar a ClickHouse en: %s\n", addr)
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
+		// Usar la dirección dinámica compuesta por las variables de entorno
 		Addr: []string{addr},
 		Auth: clickhouse.Auth{
 			Database: "default",
 			Username: "default",
-			Password: "",
+			// Usar la contraseña de entorno (que ya está configurada a "")
+			Password: password,
 		},
 	})
 	if err != nil {
@@ -115,6 +116,7 @@ func connectClickHouse() (clickhouse.Conn, error) {
 	if err := conn.Ping(context.Background()); err != nil {
 		return nil, err
 	}
+	fmt.Printf("✅ Conexión a ClickHouse exitosa en: %s\n", addr)
 	return conn, nil
 }
 
