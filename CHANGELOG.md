@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/AndreCbrera/log_collector/compare/v1.0.0...v1.0.1) (2025-10-25)
+
+
+### Bug Fixes
+
+* **db:** Use environment variables for ClickHouse host resolution ([5e3902a](https://github.com/AndreCbrera/log_collector/commit/5e3902ada8cdd2e38ad3948de16dd3937cbcddfb))
+* **db:** Use environment variables for ClickHouse host resolution ([ff045ad](https://github.com/AndreCbrera/log_collector/commit/ff045ad7255951c88a31ae3e6292421e4ce0be3f))
+
 # 1.0.0 (2025-10-25)
 
 
