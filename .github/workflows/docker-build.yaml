@@ -1,6 +1,5 @@
 name: Docker Build & Semantic Release
 
-# El flujo solo se ejecuta cuando hay un push a la rama 'main'
 on:
   push:
     branches: [ main ]
@@ -15,10 +14,8 @@ env:
 jobs:
   # Job 1: Determina la versión y crea el tag de Git
   versioning:
-    # Agregamos esta condición para asegurar que NO corre en la segunda ejecución (la del tag)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # Permisos REVISADOS: Solo necesitamos 'contents: write' para crear el tag.
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
@@ -27,40 +24,42 @@ jobs:
       
     steps:
       - name: Checkout repository
-        # ✅ CORREGIDO: Cambiado 'actions:checkout@v4' a 'actions/checkout@v4'
         uses: actions/checkout@v4
         with:
-          # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
           fetch-depth: 0 
+
+      - name: Create Semantic Release Config (.releaserc.yml)
+        run: |
+          cat << EOF > .releaserc.yml
+          plugins:
+            - "@semantic-release/commit-analyzer"
+            - "@semantic-release/release-notes-generator"
+            - "@semantic-release/changelog"
+            - "@semantic-release/git"
+          EOF
       
       - name: Automatic Semantic Versioning (Crea y sube el tag)
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
-        with:
-          # PLUGINS REVISADOS Y MINIMALISTAS:
-          # Solo incluimos los plugins para analizar, generar notas, y crear el tag de Git.
-          plugins: |
-            @semantic-release/commit-analyzer
-            @semantic-release/release-notes-generator
-            @semantic-release/changelog
-            @semantic-release/git
+        # Ya no usamos 'with: plugins', la acción leerá el archivo .releaserc.yml
         env:
-          # El token es necesario para autenticarse y crear el tag de Git
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
     runs-on: ubuntu-latest
-    # CLAVE: La condición doble permite que el Job corra si:
-    # 1. 'versioning' creó un tag (Ejecución #1)
-    # 2. El workflow fue disparado por un tag (Ejecución #2)
-    if: needs.versioning.outputs.new_release_tag != '' || startsWith(github.ref, 'refs/tags/v')
-    needs: versioning # Depende del job de versioning
+    
+    # CLAVE: Se ejecuta solo si el evento que disparó el flujo es un PUSH de un tag 'v*'.
+    # ✅ CORRECCIÓN 2: Eliminamos la dependencia de 'needs'
+    if: startsWith(github.ref, 'refs/tags/v')
+    # Se elimina 'needs: versioning' para que el job no se salte.
+    
     permissions:
       contents: read
       packages: write # Permiso para escribir en GitHub Container Registry
 
     steps:
+      # En el evento de tag, el checkout obtendrá automáticamente el código del commit etiquetado.
       - name: Checkout repository (con el tag)
         uses: actions/checkout@v4
         
