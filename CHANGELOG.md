@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/AndreCbrera/log_collector/compare/v1.0.2...v1.1.0) (2025-10-25)
+
+
+### Features
+
+* **ci:** implementa el flujo de build por tag ([ff6c6f7](https://github.com/AndreCbrera/log_collector/commit/ff6c6f74b678c2f17d9dd8b8ff8638e47149b663))
+
 ## [1.0.2](https://github.com/AndreCbrera/log_collector/compare/v1.0.1...v1.0.2) (2025-10-25)
 
 
