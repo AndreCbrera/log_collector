@@ -1,0 +1,128 @@
+name: Semantic Release + Docker Build
+
+on:
+  push:
+    branches: [ main ]
+
+# Top-level permissions: give minimal perms needed for both jobs
+permissions:
+  contents: write    # needed by semantic-release to push tags/commits
+  packages: write    # needed by actions that push to GHCR
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: log-collector-service
+
+jobs:
+  # Job A: semantic-release -> create tag + GitHub release
+  versioning:
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_tag: ${{ steps.set_tag.outputs.new_release_tag }}
+
+    steps:
+      - name: Checkout (full history & tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Semantic Release Config (.releaserc.yml)
+        run: |
+          cat << 'EOF' > .releaserc.yml
+          branches:
+            - main
+          plugins:
+            - "@semantic-release/commit-analyzer"
+            - "@semantic-release/release-notes-generator"
+            - "@semantic-release/changelog"
+            - "@semantic-release/git"
+            - "@semantic-release/github"
+          EOF
+
+      - name: Run Semantic Release (create tag + release)
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Ensure tags are fetched (semantic-release pushes the tag)
+      - name: Fetch tags (refresh)
+        run: |
+          git fetch --prune --unshallow || true
+          git fetch --tags --prune
+        # no id; this is just to make sure tags exist locally
+
+      - name: Read the created tag and expose as job output
+        id: set_tag
+        run: |
+          # Get latest tag reachable from HEAD (semantic-release pushes a tag)
+          TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$TAG" ]; then
+            echo "No tag found - semantic-release may not have created one."
+            echo "new_release_tag=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "Found tag: $TAG"
+          echo "new_release_tag=$TAG" >> $GITHUB_OUTPUT
+
+  # Job B: Build and push Docker image. Runs after versioning.
+  build-and-push:
+    needs: versioning
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout (so we can build the same commit/tag)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure the tag is present locally
+        run: |
+          echo "Versioning job output tag: ${{ needs.versioning.outputs.new_release_tag }}"
+          if [ -n "${{ needs.versioning.outputs.new_release_tag }}" ]; then
+            git fetch --tags --prune
+            git checkout "${{ needs.versioning.outputs.new_release_tag }}" || true
+          else
+            echo "No release tag found in previous job -> will build current HEAD"
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker metadata (generate tags)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            # prefer the tag created by semantic-release if present
+            type=raw,value=${{ needs.versioning.outputs.new_release_tag }}
+            # also provide tag based on git ref and sha as fallback
+            type=ref,event=branch
+            type=sha,format=long
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Build and push Docker image (multi-arch)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          file: ./Dockerfile
+
+      - name: Output pushed image references
+        run: |
+          echo "Pushed tags: ${{ steps.meta.outputs.tags }}"
+          echo "If you want the package visible publicly, visit https://github.com/${{ github.repository_owner }}?tab=packages"
