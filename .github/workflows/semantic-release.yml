@@ -1,0 +1,36 @@
+name: Semantic Release
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write   # Necesario para crear tags y commits
+  packages: write
+
+jobs:
+  versioning:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Necesario para semantic-release
+
+      - name: Create Semantic Release Config (.releaserc.yml)
+        run: |
+          cat << EOF > .releaserc.yml
+          branches:
+            - main
+          plugins:
+            - "@semantic-release/commit-analyzer"
+            - "@semantic-release/release-notes-generator"
+            - "@semantic-release/changelog"
+            - "@semantic-release/git"
+          EOF
+
+      - name: Run Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
