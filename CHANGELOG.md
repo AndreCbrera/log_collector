@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/AndreCbrera/log_collector/compare/v1.1.4...v1.2.0) (2025-10-25)
+
+
+### Bug Fixes
+
+* **ci:** verifica la condición de build-and-push ([2d50e69](https://github.com/AndreCbrera/log_collector/commit/2d50e6981eecf61248a2b6c1ff3c74a8dbd781e8))
+
+
+### Features
+
+* testing new versioning ([c672131](https://github.com/AndreCbrera/log_collector/commit/c6721318e11c8cc911860af0ce46acb26f0c4007))
+
 ## [1.1.4](https://github.com/AndreCbrera/log_collector/compare/v1.1.3...v1.1.4) (2025-10-25)
 
 
