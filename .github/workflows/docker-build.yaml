@@ -5,7 +5,7 @@ on:
   push:
     branches: [ main ]
     tags:
-          - 'v*'
+      - 'v*'
 
 env:
   REGISTRY: ghcr.io
@@ -31,18 +31,23 @@ jobs:
           # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
           fetch-depth: 0 
       
+      # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
+      # Esto soluciona los errores 'Unexpected input(s) plugins' y el de 'package.json'.
+      - name: Create Semantic Release Config (.releaserc.yml)
+        run: |
+          cat << EOF > .releaserc.yml
+          plugins:
+            - "@semantic-release/commit-analyzer"
+            - "@semantic-release/release-notes-generator"
+            - "@semantic-release/changelog"
+            - "@semantic-release/git"
+          EOF
+
       - name: Automatic Semantic Versioning (Crea y sube el tag)
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
-        with:
-          # PLUGINS REVISADOS Y MINIMALISTAS:
-          # Solo incluimos los plugins para analizar, generar notas, y crear el tag de Git.
-          # Se omite @semantic-release/github (soluciona 422) y @semantic-release/npm (soluciona ENOPKG).
-          plugins: |
-            @semantic-release/commit-analyzer
-            @semantic-release/release-notes-generator
-            @semantic-release/changelog
-            @semantic-release/git
+        # Se elimina la entrada 'plugins:' que es la que causaba el error.
+        # La acción leerá automáticamente el archivo .releaserc.yml.
         env:
           # El token es necesario para autenticarse y crear el tag de Git
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -50,7 +55,7 @@ jobs:
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
     runs-on: ubuntu-latest
-    # SOLO se ejecuta si el job 'versioning' creó una nueva etiqueta
+    # Si esta condición falla, el job se salta.
     if: needs.versioning.outputs.new_release_tag != ''
     needs: versioning # Depende del job de versioning
     permissions:
