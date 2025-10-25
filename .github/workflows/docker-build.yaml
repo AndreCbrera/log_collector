@@ -27,7 +27,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # REVERTIDO: Se usa el GITHUB_TOKEN predeterminado. El permiso 'contents: write' lo autoriza.
+          # 🚨 CLAVE: Usamos el PAT aquí para garantizar que la nueva ejecución se dispare.
+          token: ${{ secrets.RELEASE_PAT }}
           fetch-depth: 0 
       
       # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
@@ -45,8 +46,8 @@ jobs:
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
         env:
-          # REVERTIDO: Usar el token predeterminado de GitHub.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 🚨 CLAVE: Semantic Release debe usar el PAT.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
