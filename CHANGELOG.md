@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/AndreCbrera/log_collector/compare/v1.1.2...v1.1.3) (2025-10-25)
+
+
+### Bug Fixes
+
+* update semantic versioning ([b9ef064](https://github.com/AndreCbrera/log_collector/commit/b9ef06456ebc10a625e9a5b00b0a66603c2e52f1))
+
 ## [1.1.2](https://github.com/AndreCbrera/log_collector/compare/v1.1.1...v1.1.2) (2025-10-25)
 
 
