@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/AndreCbrera/log_collector/compare/v1.0.0...v1.0.1) (2025-10-25)
+
+
+### Bug Fixes
+
+* **actions:** update sintax to push tags to docker resgistry ([debb594](https://github.com/AndreCbrera/log_collector/commit/debb59467f66e95d73891228907049d327ff218e))
+
 # 1.0.0 (2025-10-24)
 
 
