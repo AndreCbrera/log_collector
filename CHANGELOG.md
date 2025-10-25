@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/AndreCbrera/log_collector/compare/v1.0.1...v1.1.0) (2025-10-25)
+
+
+### Features
+
+* Use ENV vars for ClickHouse connection and auth ([da9694a](https://github.com/AndreCbrera/log_collector/commit/da9694a77c462732f9c0f674907155b7bc8a7153))
+
 ## [1.0.1](https://github.com/AndreCbrera/log_collector/compare/v1.0.0...v1.0.1) (2025-10-25)
 
 
