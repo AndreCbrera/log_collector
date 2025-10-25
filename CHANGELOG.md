@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/AndreCbrera/log_collector/compare/v1.1.3...v1.1.4) (2025-10-25)
+
+
+### Bug Fixes
+
+* testing versioning ([ac88791](https://github.com/AndreCbrera/log_collector/commit/ac887911a3cccdeff58439a0eb64b7723cee90e2))
+
 ## [1.1.3](https://github.com/AndreCbrera/log_collector/compare/v1.1.2...v1.1.3) (2025-10-25)
 
 
