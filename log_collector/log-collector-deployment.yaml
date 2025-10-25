@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-collector-deployment
+  labels:
+    app: log-collector
+spec:
+  # Define que siempre queremos 2 instancias de la aplicación en ejecución
+  replicas: 2
+  selector:
+    matchLabels:
+      app: log-collector
+  template:
+    metadata:
+      labels:
+        app: log-collector
+    spec:
+      # AÑADIMOS: Referencia al secreto de autenticación
+      imagePullSecrets:
+      - name: ghcr-auth-secret
+      containers:
+      - name: log-collector-container
+        # Utilizamos la imagen de GHCR con la versión v1.0.0
+        image: ghcr.io/andrecbrera/log-collector-service:v1.0.0
+        # Reemplaza '8080' si tu aplicación Go escucha en un puerto diferente
+        ports:
+        - containerPort: 8080
+        
+        # AÑADIDO: Variables de entorno para inyectar la configuración de ClickHouse
+        env:
+        - name: CLICKHOUSE_HOST
+          # Nombre del servicio Headless (la URL más simple del clúster) en el namespace 'clickhouse'.
+          # ¡IMPORTANTE!: Tu código Go debe leer esta variable en lugar de usar una URL codificada.
+          value: clickhouse-cluster.clickhouse.svc.cluster.local 
+        - name: CLICKHOUSE_PORT
+          value: "9000" # Puerto nativo de ClickHouse (TCP)
+          
+        # Define los límites de recursos (buenas prácticas)
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "500m"

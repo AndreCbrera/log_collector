@@ -1,4 +1,3 @@
-// log_collector/main.go
 package main
 
 import (
@@ -6,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os" // <- IMPORTACIÓN AÑADIDA
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -88,9 +88,18 @@ func IngestHandler(w http.ResponseWriter, r *http.Request) {
 // --------------------------------------------------------------------------------
 
 func connectClickHouse() (clickhouse.Conn, error) {
-	// Usar el FQDN del Service de ClickHouse en tu cluster de Kubernetes
-	// clickhouse-cluster-cluster1-0-0.clickhouse.clickhouse.svc.cluster.local
-	addr := "clickhouse-cluster-cluster1-0-0.clickhouse.clickhouse.svc.cluster.local:9000"
+	// 🐛 CORREGIDO: Usar variables de entorno inyectadas por Kubernetes
+	host := os.Getenv("CLICKHOUSE_HOST")
+	port := os.Getenv("CLICKHOUSE_PORT")
+
+	if host == "" || port == "" {
+		// Fallback para desarrollo o error en la inyección de env
+		return nil, fmt.Errorf("variables de entorno CLICKHOUSE_HOST o CLICKHOUSE_PORT no definidas")
+	}
+
+	addr := fmt.Sprintf("%s:%s", host, port)
+
+	fmt.Printf("ℹ️ Intentando conectar a ClickHouse en: %s\n", addr) // Log de depuración
 
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{addr},

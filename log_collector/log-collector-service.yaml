@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: log-collector-service
+spec:
+  # El selector empareja este Service con el Deployment que tiene la etiqueta app: log-collector
+  selector:
+    app: log-collector
+  # Utilizamos NodePort para exponerlo fuera del clúster
+  type: NodePort
+  ports:
+    - protocol: TCP
+      # Puerto que el Service expone internamente (ClusterIP)
+      port: 80
+      # Puerto al que se conecta tu contenedor Go (8080)
+      targetPort: 8080
+      # Puerto externo en el nodo (asegúrate de que esté libre, p. ej., 30007)
+      nodePort: 30007 
