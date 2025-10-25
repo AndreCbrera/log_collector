@@ -27,7 +27,8 @@ jobs:
       
     steps:
       - name: Checkout repository
-        uses: actions:checkout@v4
+        # ✅ CORREGIDO: Cambiado 'actions:checkout@v4' a 'actions/checkout@v4'
+        uses: actions/checkout@v4
         with:
           # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
           fetch-depth: 0 
