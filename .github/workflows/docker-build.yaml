@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-    # Eliminamos 'outputs' ya que la lógica de ejecución se separó.
+    # Eliminamos 'outputs' ya que la lógica de ejecución se separó
     
     steps:
       - name: Checkout repository
