@@ -1,6 +1,6 @@
 name: Docker Build & Semantic Release
 
-# El flujo solo se ejecuta cuando hay un push a la rama 'main'
+# El flujo se ejecuta por un PUSH a la rama 'main' (para versioning) O un PUSH de un tag 'v*' (para build)
 on:
   push:
     branches: [ main ]
@@ -15,12 +15,13 @@ env:
 jobs:
   # Job 1: Determina la versión y crea el tag de Git
   versioning:
+    # CONDICIÓN CLAVE: Solo se ejecuta si el evento es un push a la rama 'main'.
+    # Esto evita que se ejecute en el evento de tag (la segunda ejecución).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    # Permisos REVISADOS: Solo necesitamos 'contents: write' para crear el tag.
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-      # issues: write # <-- Eliminado, ya no es necesario sin el plugin @semantic-release/github
     outputs:
       new_release_tag: ${{ steps.semantic.outputs.new_release_tag }}
       
@@ -28,11 +29,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # Crucial: Obtiene todo el historial de commits para que semantic-release pueda analizarlo
           fetch-depth: 0 
       
       # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
-      # Esto soluciona los errores 'Unexpected input(s) plugins' y el de 'package.json'.
       - name: Create Semantic Release Config (.releaserc.yml)
         run: |
           cat << EOF > .releaserc.yml
@@ -46,26 +45,25 @@ jobs:
       - name: Automatic Semantic Versioning (Crea y sube el tag)
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
-        # Se elimina la entrada 'plugins:' que es la que causaba el error.
-        # La acción leerá automáticamente el archivo .releaserc.yml.
         env:
-          # El token es necesario para autenticarse y crear el tag de Git
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
     runs-on: ubuntu-latest
-    # Si esta condición falla, el job se salta.
-    if: needs.versioning.outputs.new_release_tag != ''
-    needs: versioning # Depende del job de versioning
+    
+    # CONDICIÓN CLAVE: El job solo se ejecuta si el evento es un PUSH de un tag que empieza por 'v'.
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    # SE ELIMINÓ: La dependencia 'needs: versioning' es innecesaria y causaba el problema de skip.
     permissions:
       contents: read
       packages: write # Permiso para escribir en GitHub Container Registry
 
     steps:
-      - name: Checkout repository (con el nuevo tag)
+      # En el evento de tag, el checkout obtendrá automáticamente el código del tag.
+      - name: Checkout repository (con el tag)
         uses: actions/checkout@v4
-        # Esto asegura que el workflow trabaja con el código que acaba de ser etiquetado
         
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
