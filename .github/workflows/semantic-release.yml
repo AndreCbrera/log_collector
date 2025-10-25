@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write   # Necesario para crear tags y commits
+  contents: write
   packages: write
 
 jobs:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Necesario para semantic-release
+          fetch-depth: 0
 
       - name: Create Semantic Release Config (.releaserc.yml)
         run: |
@@ -28,6 +28,7 @@ jobs:
             - "@semantic-release/release-notes-generator"
             - "@semantic-release/changelog"
             - "@semantic-release/git"
+            - "@semantic-release/github"
           EOF
 
       - name: Run Semantic Release
