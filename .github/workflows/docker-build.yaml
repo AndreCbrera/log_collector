@@ -21,14 +21,13 @@ jobs:
     permissions:
       contents: write # Necesario para crear y subir tags
       packages: write
-    # Eliminamos 'outputs' ya que la lógica de ejecución se separó
+    # Eliminamos 'outputs' ya que la lógica de ejecución se separó.
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # 🚨 UTILIZA el PAT para hacer checkout y disparar la siguiente ejecución.
-          token: ${{ secrets.RELEASE_PAT }}
+          # REVERTIDO: Se usa el GITHUB_TOKEN predeterminado. El permiso 'contents: write' lo autoriza.
           fetch-depth: 0 
       
       # PASO CLAVE: Crea el archivo .releaserc.yml para configurar Semantic Release.
@@ -46,8 +45,8 @@ jobs:
         id: semantic
         uses: cycjimmy/semantic-release-action@v4
         env:
-          # 🚨 Semantic Release también debe usar el PAT para el push final.
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
+          # REVERTIDO: Usar el token predeterminado de GitHub.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
   # Job 2: Construye y sube la imagen Docker
   build-and-push:
